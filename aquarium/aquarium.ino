@@ -27,6 +27,12 @@ int selectNo = 0;
 
 char c[] = "   "; 
 
+int mode = 0;
+int brightness = 100;
+int noOfLed = 9;
+
+
+
 void setup()   {                
   Serial.begin(9600);
 
@@ -46,50 +52,141 @@ void loop() {
   b2.setClickTicks(20);
   b3.setClickTicks(20);
   b4.setClickTicks(20);
-
-  handleButtons();
-
+  if(displayOn && !displayDimmed){
+    handleButtons();
+  }
+  
   screenPowerManagement();
+  delay(25);
 }
 
 void handleButtons(){
   bool change = false;
   if(displayState == 0){
     if (b2State == b2.CLICK_STATE){
-      selectNo = (selectNo + 1)%3;
-      change = true;
-    }
-    if (b3State == b3.CLICK_STATE){
       selectNo--;
       if(selectNo == -1){
         selectNo = 2;
       }
       change = true;
     }
+    if (b3State == b3.CLICK_STATE){
+      selectNo = (selectNo + 1)%3;
+      change = true;
+    }
     if (b4State == b4.CLICK_STATE){
       displayState = (selectNo+1);
-      change = true;
-    }
-  }
-  else if(displayState == 1){
-    if (b1State == b1.CLICK_STATE){
-      displayState = 0;
-      change = true;
-    }
-  }
-  else if(displayState == 2){
-    if (b1State == b1.CLICK_STATE){
-      displayState = 0;
-      change = true;
-    }
-  }
-  else if(displayState == 3){
-    if (b1State == b1.CLICK_STATE){
-      displayState = 0;
+      if(displayState == 1){
+        mode = 1;
+      }
+      if(displayState == 2 || displayState == 3){
+        selectNo = 0;
+      }
       change = true;
     }
   }
 
+  
+  else if(displayState == 1){
+    if (b2State == b2.CLICK_STATE){
+      if(brightness >= 5){
+        brightness = brightness - 5;
+      }
+      change = true;
+    }
+    if (b2State == b2.DURING_LONG_PRESS_STATE){
+      if(brightness >= 5){
+        brightness = brightness - 5;
+      }
+      delay(25);
+      change = true;
+    }
+    if (b3State == b3.CLICK_STATE){
+      if(brightness <= 95){
+        brightness = brightness + 5;
+      }
+      change = true;
+    }
+    if (b3State == b3.DURING_LONG_PRESS_STATE){
+      if(brightness <= 95){
+        brightness = brightness + 5;
+      }
+      delay(25);
+      change = true;
+    }
+    if (b4State == b4.CLICK_STATE){
+      displayState = 10;
+      change = true;
+    }
+  }
+
+  
+  else if(displayState == 2){
+    if (b1State == b1.CLICK_STATE){
+      displayState = 0;
+      selectNo = 0;
+      change = true;
+    }
+    if (b2State == b2.CLICK_STATE){
+      selectNo--;
+      if(selectNo == -1){
+        selectNo = 2;
+      }
+      change = true;
+    }
+    if (b3State == b3.CLICK_STATE){
+      selectNo = (selectNo + 1)%3;
+      change = true;
+    }
+    if (b4State == b4.CLICK_STATE){
+      displayState = (selectNo+20);
+      change = true;
+    }
+  }
+
+  
+  else if(displayState == 3){
+    if (b1State == b1.CLICK_STATE){
+      displayState = 0;
+      selectNo = 0;
+      change = true;
+    }
+    if (b2State == b2.CLICK_STATE){
+      selectNo--;
+      if(selectNo == -1){
+        selectNo = 1;
+      }
+      change = true;
+    }
+    if (b3State == b3.CLICK_STATE){
+      selectNo = (selectNo + 1)%2;
+      change = true;
+    }
+    if (b4State == b4.CLICK_STATE){
+      displayState = (selectNo+30);
+      change = true;
+    }
+  }
+
+  
+  else if(displayState == 10){
+    if (b2State == b2.CLICK_STATE){
+      if(noOfLed > 0){
+        noOfLed--;
+      }
+      change = true;
+    }
+    if (b3State == b3.CLICK_STATE){
+      if(noOfLed < 9){
+        noOfLed++;
+      }
+      change = true;
+    }
+    if (b4State == b4.CLICK_STATE){
+      displayState = 0;
+      change = true;
+    }
+  }
   
   if(change){
     displayAll();
@@ -118,24 +215,50 @@ void displayHeader(){
 void displayContent(){
   display.setTextSize(1);
   display.setTextColor(WHITE);
-  display.setCursor(1,10);
+  display.setCursor(1,17);
+  
   if(displayState == 0){
-    setChevrons();
+    setChevrons(3);
     display.println((String)c[0]+" Manual");
-    display.setCursor(1,20);
     display.println((String)c[1]+" Auto");
-    display.setCursor(1,31);
     display.println((String)c[2]+" Settings");
-    displayButtonMenu("      PREV  NEXT     ");
   }
+  
   else if(displayState == 1){
-    display.println("Manual");
+    display.setTextSize(2);
+    display.setCursor(45,15);
+    display.setTextColor(BLACK, WHITE);
+    display.print(brightness);
+    display.println("%");
+    display.setCursor(55,40);
+    display.setTextColor(WHITE);
+    display.println(noOfLed);
   }
-  else if(displayState == 2){
-    display.println("Auto");
+  
+  if(displayState == 2){
+    setChevrons(3);
+    display.println((String)c[0]+" 100%");
+    //display.setCursor(1,20);
+    display.println((String)c[1]+" Cloud");
+    //display.setCursor(1,31);
+    display.println((String)c[2]+" Eco");
   }
+  
   else if(displayState == 3){
-    display.println("Setttings");
+    setChevrons(2);
+    display.println((String)c[0]+" Set Temp");
+    display.println((String)c[1]+" On/Off Time");
+  }
+  
+  else if(displayState == 10){
+    
+    display.setTextSize(2);
+    display.setCursor(45,15);
+    display.print(brightness);
+    display.println("%");
+    display.setCursor(55,40);
+    display.setTextColor(BLACK, WHITE);
+    display.println(noOfLed);
   }
 }
 
@@ -146,10 +269,9 @@ void displayAll(){
   display.display();
 }
 
-void setChevrons(){
+void setChevrons(int n){
   c[selectNo] = '>';
-  Serial.println(sizeof(c));
-  for(int i = 0; i < sizeof(c) - 1; i++){
+  for(int i = 0; i < n; i++){
     if (i != selectNo){
       c[i] = ' ';
     }
@@ -162,7 +284,7 @@ void screenPowerManagement(){
     display.display();
     displayDimmed = true;
   }
-  if(displayDimmed && (b1State != 0 || b2State != 0 || b3State != 0 || b4State != 0)){
+  if(displayDimmed && (b1State == 1 || b2State == 1 || b3State == 1 || b4State == 1)){
     display.dim(false);
     display.display();
     displayDimmed = false;
@@ -173,7 +295,7 @@ void screenPowerManagement(){
     display.off();
     displayOn = false;
   }
-  if(!displayOn && (b1State != 0 || b2State != 0 || b3State != 0 || b4State != 0)){
+  if(!displayOn && (b1State == 1 || b2State == 1 || b3State == 1 || b4State == 1)){
     display.begin(SSD1306_SWITCHCAPVCC, 60);
     displayOn = true;
   }
