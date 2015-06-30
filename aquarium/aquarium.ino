@@ -3,6 +3,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <OneButton.h>
+#include <Time.h>
 
 #define OLED_RESET 4
 Adafruit_SSD1306 display(OLED_RESET);
@@ -12,33 +13,36 @@ bool displayOn = true;
 #define SCREEN_DIM 5000
 #define SCREEN_OFF 10000
 
+#define MODE_MANUAL 0
+#define MODE_100 1
+#define MODE_CLOUD 2
+#define MODE_ECO 3
+#define MODE_DEMO 4
+
 OneButton b1(A0, true);
 OneButton b2(A1, true);
 OneButton b3(A2, true);
 OneButton b4(A3, true);
 
-int b1State = 0;
-int b2State = 0;
-int b3State = 0;
-int b4State = 0;
+byte b1State = 0;
+byte b2State = 0;
+byte b3State = 0;
+byte b4State = 0;
 
-int displayState = 0;
-int selectNo = 0;
+byte displayState = 0;
+byte selectNo = 0;
 
 char c[] = "   "; 
 
-int mode = 0;
-int brightness = 100;
-int noOfLed = 9;
+byte mode = 0;
+byte brightness = 100;
+byte noOfLed = 9;
 
 
 
 void setup()   {                
-  Serial.begin(9600);
-
-  pinMode(12, OUTPUT);
-  digitalWrite(12, HIGH);
-  
+  //Serial.begin(9600);
+  setTime(13, 15, 0, 30, 6, 2015);
   display.begin(SSD1306_SWITCHCAPVCC, 60);
   displayAll();
 }
@@ -77,7 +81,7 @@ void handleButtons(){
     if (b4State == b4.CLICK_STATE){
       displayState = (selectNo+1);
       if(displayState == 1){
-        mode = 1;
+        mode = MODE_MANUAL;
       }
       if(displayState == 2 || displayState == 3){
         selectNo = 0;
@@ -139,7 +143,9 @@ void handleButtons(){
       change = true;
     }
     if (b4State == b4.CLICK_STATE){
-      displayState = (selectNo+20);
+      mode = selectNo+1;
+      displayState = 0;
+      selectNo = 0;
       change = true;
     }
   }
@@ -154,16 +160,25 @@ void handleButtons(){
     if (b2State == b2.CLICK_STATE){
       selectNo--;
       if(selectNo == -1){
-        selectNo = 1;
+        selectNo = 2;
       }
       change = true;
     }
     if (b3State == b3.CLICK_STATE){
-      selectNo = (selectNo + 1)%2;
+      selectNo = (selectNo + 1)%3;
       change = true;
     }
     if (b4State == b4.CLICK_STATE){
-      displayState = (selectNo+30);
+      if(selectNo == 2){
+        mode = MODE_DEMO;
+        displayState = 0;
+        selectNo = 0;
+      }
+      else{
+        //TO-DO
+        displayState = 0;
+        selectNo = 0;
+      }
       change = true;
     }
   }
@@ -209,7 +224,11 @@ void displayHeader(){
   display.setTextColor(BLACK);
   
   display.fillRect(0, 0, 128, 9, WHITE);
-  display.println("P1   13:15   26.2C");
+  display.println(getModeStr());
+  display.setCursor(49,1);
+  display.println(getTimeStr());
+  //display.setCursor(97,1);
+  //display.println("26.6C");
 }
 
 void displayContent(){
@@ -219,9 +238,9 @@ void displayContent(){
   
   if(displayState == 0){
     setChevrons(3);
-    display.println((String)c[0]+" Manual");
-    display.println((String)c[1]+" Auto");
-    display.println((String)c[2]+" Settings");
+    display.println((String)c[0]+F(" Manual"));
+    display.println((String)c[1]+F(" Auto"));
+    display.println((String)c[2]+F(" Settings"));
   }
   
   else if(displayState == 1){
@@ -229,7 +248,7 @@ void displayContent(){
     display.setCursor(45,15);
     display.setTextColor(BLACK, WHITE);
     display.print(brightness);
-    display.println("%");
+    display.println(F("%"));
     display.setCursor(55,40);
     display.setTextColor(WHITE);
     display.println(noOfLed);
@@ -237,25 +256,23 @@ void displayContent(){
   
   if(displayState == 2){
     setChevrons(3);
-    display.println((String)c[0]+" 100%");
-    //display.setCursor(1,20);
-    display.println((String)c[1]+" Cloud");
-    //display.setCursor(1,31);
-    display.println((String)c[2]+" Eco");
+    display.println((String)c[0]+F(" 100%"));
+    display.println((String)c[1]+F(" Cloud"));
+    display.println((String)c[2]+F(" Eco"));
   }
   
   else if(displayState == 3){
-    setChevrons(2);
-    display.println((String)c[0]+" Set Temp");
-    display.println((String)c[1]+" On/Off Time");
+    setChevrons(3);
+    display.println((String)c[0]+F(" Set Temp"));
+    display.println((String)c[1]+F(" On/Off Time"));
+    display.println((String)c[2]+F(" Demo"));
   }
   
   else if(displayState == 10){
-    
     display.setTextSize(2);
     display.setCursor(45,15);
     display.print(brightness);
-    display.println("%");
+    display.println(F("%"));
     display.setCursor(55,40);
     display.setTextColor(BLACK, WHITE);
     display.println(noOfLed);
@@ -269,9 +286,9 @@ void displayAll(){
   display.display();
 }
 
-void setChevrons(int n){
+void setChevrons(byte n){
   c[selectNo] = '>';
-  for(int i = 0; i < n; i++){
+  for(byte i = 0; i < n; i++){
     if (i != selectNo){
       c[i] = ' ';
     }
@@ -291,7 +308,6 @@ void screenPowerManagement(){
   }
 
   if(displayOn && b1.getLastActivityTime() + SCREEN_OFF < millis() && b2.getLastActivityTime() + SCREEN_OFF < millis() && b3.getLastActivityTime() + SCREEN_OFF < millis() && b4.getLastActivityTime() + SCREEN_OFF < millis()){
-    //digitalWrite(12,LOW);
     display.off();
     displayOn = false;
   }
@@ -301,3 +317,35 @@ void screenPowerManagement(){
   }
 }
 
+String getModeStr(){
+  if(mode == MODE_MANUAL){
+    return "M"+(String)noOfLed+"-"+(String)brightness;
+  }
+  else if(mode == MODE_100){
+    return "100%";
+  }
+  else if(mode == MODE_CLOUD){
+    return "CLOUD";
+  }
+  else if(mode == MODE_ECO){
+    return "ECO";
+  }
+  else if(mode == MODE_DEMO){
+    return "DEMO";
+  }
+  else{
+    return "???";
+  }
+}
+
+String getTimeStr(){
+  String spaceH = "";
+  String spaceM = "";
+  if(hour() < 10){
+    spaceH = " ";
+  }
+  if(minute() < 10){
+    spaceM = " ";
+  }
+  return spaceH + hour() + ":" + spaceM + minute();
+}
