@@ -4,6 +4,7 @@
 #include <Adafruit_SSD1306.h>
 #include <OneButton.h>
 #include <Time.h>
+#include <avr/pgmspace.h>
 
 #define OLED_RESET 4
 Adafruit_SSD1306 display(OLED_RESET);
@@ -12,12 +13,15 @@ bool displayOn = true;
 
 #define SCREEN_DIM 5000
 #define SCREEN_OFF 10000
+#define TOTALLED 8
 
 #define MODE_MANUAL 0
 #define MODE_100 1
 #define MODE_CLOUD 2
 #define MODE_ECO 3
 #define MODE_DEMO 4
+
+const int leds[] PROGMEM = {3,9,10,11,103,109,110,111}; //if # > 100, pin is on second arduino
 
 OneButton b1(A0, true);
 OneButton b2(A1, true);
@@ -35,13 +39,16 @@ byte selectNo = 0;
 char c[] = "   "; 
 
 byte mode = 0;
-byte brightness = 100;
-byte noOfLed = 9;
 
+byte manualBrightness = 100;
+byte manualNoOfLed = 8;
 
 
 void setup()   {                
   //Serial.begin(9600);
+  pinMode(3,OUTPUT);
+  digitalWrite(3, LOW);
+  
   setTime(13, 15, 0, 30, 6, 2015);
   display.begin(SSD1306_SWITCHCAPVCC, 60);
   displayAll();
@@ -56,9 +63,12 @@ void loop() {
   b2.setClickTicks(20);
   b3.setClickTicks(20);
   b4.setClickTicks(20);
+
   if(displayOn && !displayDimmed){
     handleButtons();
   }
+
+  modeManagement();
   
   screenPowerManagement();
   delay(25);
@@ -93,27 +103,27 @@ void handleButtons(){
   
   else if(displayState == 1){
     if (b2State == b2.CLICK_STATE){
-      if(brightness >= 5){
-        brightness = brightness - 5;
+      if(manualBrightness >= 5){
+        manualBrightness = manualBrightness - 5;
       }
       change = true;
     }
     if (b2State == b2.DURING_LONG_PRESS_STATE){
-      if(brightness >= 5){
-        brightness = brightness - 5;
+      if(manualBrightness >= 5){
+        manualBrightness = manualBrightness - 5;
       }
       delay(25);
       change = true;
     }
     if (b3State == b3.CLICK_STATE){
-      if(brightness <= 95){
-        brightness = brightness + 5;
+      if(manualBrightness <= 95){
+        manualBrightness = manualBrightness + 5;
       }
       change = true;
     }
     if (b3State == b3.DURING_LONG_PRESS_STATE){
-      if(brightness <= 95){
-        brightness = brightness + 5;
+      if(manualBrightness <= 95){
+        manualBrightness = manualBrightness + 5;
       }
       delay(25);
       change = true;
@@ -186,14 +196,14 @@ void handleButtons(){
   
   else if(displayState == 10){
     if (b2State == b2.CLICK_STATE){
-      if(noOfLed > 0){
-        noOfLed--;
+      if(manualNoOfLed > 0){
+        manualNoOfLed--;
       }
       change = true;
     }
     if (b3State == b3.CLICK_STATE){
-      if(noOfLed < 9){
-        noOfLed++;
+      if(manualNoOfLed < 9){
+        manualNoOfLed++;
       }
       change = true;
     }
@@ -224,7 +234,9 @@ void displayHeader(){
   display.setTextColor(BLACK);
   
   display.fillRect(0, 0, 128, 9, WHITE);
+  //Serial.println("aa");
   display.println(getModeStr());
+  //Serial.println(getModeStr());
   display.setCursor(49,1);
   display.println(getTimeStr());
   //display.setCursor(97,1);
@@ -247,11 +259,11 @@ void displayContent(){
     display.setTextSize(2);
     display.setCursor(45,15);
     display.setTextColor(BLACK, WHITE);
-    display.print(brightness);
+    display.print(manualBrightness);
     display.println(F("%"));
     display.setCursor(55,40);
     display.setTextColor(WHITE);
-    display.println(noOfLed);
+    display.println(manualNoOfLed);
   }
   
   if(displayState == 2){
@@ -271,11 +283,11 @@ void displayContent(){
   else if(displayState == 10){
     display.setTextSize(2);
     display.setCursor(45,15);
-    display.print(brightness);
+    display.print(manualBrightness);
     display.println(F("%"));
     display.setCursor(55,40);
     display.setTextColor(BLACK, WHITE);
-    display.println(noOfLed);
+    display.println(manualNoOfLed);
   }
 }
 
@@ -317,9 +329,36 @@ void screenPowerManagement(){
   }
 }
 
+void modeManagement(){
+  if(mode == MODE_MANUAL){
+    
+  }
+  else if (mode == MODE_100){
+    
+  }
+  else if (mode == MODE_CLOUD){
+    
+  }
+  else if (mode == MODE_ECO){
+    
+  }
+  else{ //Mode demo
+    if(second() % 2 == 0){
+      for(byte i = 0; i < TOTALLED; i++){
+        setLedBrightness(i, 255);
+      }
+    }
+    else {
+      for(byte i = 0; i < TOTALLED; i++){
+        setLedBrightness(i, 0);
+      }
+    }
+  }
+}
+
 String getModeStr(){
   if(mode == MODE_MANUAL){
-    return "M"+(String)noOfLed+"-"+(String)brightness;
+    return "M"+(String)manualNoOfLed+"-"+(String)manualBrightness;
   }
   else if(mode == MODE_100){
     return "100%";
@@ -349,3 +388,15 @@ String getTimeStr(){
   }
   return spaceH + hour() + ":" + spaceM + minute();
 }
+
+void setLedBrightness(byte ledNo, byte brightness){
+  if(leds[ledNo] < 100){
+    analogWrite(leds[ledNo], brightness);
+  }
+  else {
+    Serial.print(leds[ledNo]);
+    Serial.print(",");
+    Serial.println(brightness);
+  }
+}
+
