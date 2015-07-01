@@ -53,7 +53,7 @@ void setup()   {
   //Init led pins :
   for(int i = 0; i < 4; i++){
     pinMode(leds[i],OUTPUT);
-    analogWrite(leds[i], 100);
+    analogWrite(leds[i], 0);
   }
 
   setTime(13, 15, 0, 30, 6, 2015);
@@ -212,7 +212,7 @@ void handleButtons(){
       change = true;
     }
     if (b3State == b3.CLICK_STATE){
-      if(manualNoOfLed < 9){
+      if(manualNoOfLed < TOTALLED){
         manualNoOfLed++;
       }
       change = true;
@@ -373,16 +373,22 @@ void screenPowerManagement(){
 
 void modeManagement(){
   if(mode == MODE_MANUAL){
-    
+    for(byte i = 0; i < manualNoOfLed; i++){
+     setLedBrightness(i, manualBrightness*2.55);
+    }
   }
   else if (mode == MODE_100){
-    
+    for(byte i = 0; i < TOTALLED; i++){
+     setLedBrightness(i, 255);
+    }
   }
   else if (mode == MODE_CLOUD){
     
   }
   else if (mode == MODE_ECO){
-    
+    for(byte i = 0; i < TOTALLED; i++){
+     setLedBrightness(i, 128);
+    }
   }
   else{ //Mode demo
     if(demoStep == 0){
