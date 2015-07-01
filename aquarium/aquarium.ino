@@ -1,19 +1,20 @@
-#include <SPI.h>
 #include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+#include "U8glib.h"
 #include <OneButton.h>
 #include <Time.h>
 #include <avr/pgmspace.h>
 
 #define OLED_RESET 4
-Adafruit_SSD1306 display(OLED_RESET);
+//U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE|U8G_I2C_OPT_DEV_0); //SLOW
+U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_DEV_0|U8G_I2C_OPT_NO_ACK|U8G_I2C_OPT_FAST); //FASTER
 bool displayDimmed = false;
 bool displayOn = true;
 
 #define SCREEN_DIM 5000
 #define SCREEN_OFF 10000
 #define TOTALLED 8
+#define REGULAR_FONT u8g_font_7x13B
+#define BIG_FONT u8g_font_fur20
 
 #define MODE_MANUAL 0
 #define MODE_100 1
@@ -41,16 +42,23 @@ char c[] = "   ";
 byte mode = 0;
 
 byte manualBrightness = 100;
-byte manualNoOfLed = 8;
+byte manualNoOfLed = 0;
+
 
 
 void setup()   {                
-  //Serial.begin(9600);
-  pinMode(3,OUTPUT);
-  digitalWrite(3, LOW);
+  Serial.begin(9600);
+
+  //Init led pins :
+  for(int i = 0; i < 4; i++){
+    pinMode(leds[i],OUTPUT);
+    digitalWrite(leds[i], LOW);
+  }
   
   setTime(13, 15, 0, 30, 6, 2015);
-  display.begin(SSD1306_SWITCHCAPVCC, 60);
+  u8g.setRot180();
+  u8g.setColorIndex(1);
+  u8g.setFont(REGULAR_FONT);
   displayAll();
 }
 
@@ -71,7 +79,6 @@ void loop() {
   modeManagement();
   
   screenPowerManagement();
-  delay(25);
 }
 
 void handleButtons(){
@@ -218,84 +225,115 @@ void handleButtons(){
   }
 }
 
-void displayButtonMenu(String str){
-  display.setTextSize(1);
-  display.setCursor(1,56);
-  display.setTextColor(BLACK);
-  
-  display.fillRect(0, 55, 128, 9, WHITE);
-  
-  display.println(str);
-}
+//void displayButtonMenu(String str){
+//  display.setTextSize(1);
+//  display.setCursor(1,56);
+//  display.setTextColor(BLACK);
+//  
+//  display.fillRect(0, 55, 128, 9, WHITE);
+//  
+//  display.println(str);
+//}
 
 void displayHeader(){
-  display.setTextSize(1);
-  display.setCursor(1,1);
-  display.setTextColor(BLACK);
-  
-  display.fillRect(0, 0, 128, 9, WHITE);
-  //Serial.println("aa");
-  display.println(getModeStr());
-  //Serial.println(getModeStr());
-  display.setCursor(49,1);
-  display.println(getTimeStr());
-  //display.setCursor(97,1);
-  //display.println("26.6C");
+  u8g.drawBox( 0, 0, 128, 12);
+  u8g.setColorIndex(0);
+  u8g.setPrintPos(1, 10); 
+  u8g.print(getModeStr());
+  u8g.setPrintPos(93, 10); 
+  u8g.print(getTimeStr());
+  u8g.setColorIndex(1);
+  //u8g.print((char)0xb0);  // Will display the °Character
 }
 
 void displayContent(){
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  display.setCursor(1,17);
   
   if(displayState == 0){
     setChevrons(3);
-    display.println((String)c[0]+F(" Manual"));
-    display.println((String)c[1]+F(" Auto"));
-    display.println((String)c[2]+F(" Settings"));
+    u8g.setPrintPos(1, 25); 
+    u8g.print(c[0]);
+    u8g.print(F(" Manual"));
+    u8g.setPrintPos(1, 40); 
+    u8g.print(c[1]);
+    u8g.print(F(" Auto"));
+    u8g.setPrintPos(1, 55); 
+    u8g.print(c[2]);
+    u8g.print(F(" Settings"));
   }
   
   else if(displayState == 1){
-    display.setTextSize(2);
-    display.setCursor(45,15);
-    display.setTextColor(BLACK, WHITE);
-    display.print(manualBrightness);
-    display.println(F("%"));
-    display.setCursor(55,40);
-    display.setTextColor(WHITE);
-    display.println(manualNoOfLed);
+    u8g.setFont(BIG_FONT);
+    
+    if(manualBrightness == 100){
+      u8g.drawBox( 30, 14, 75, 24);
+      u8g.setPrintPos(30, 35);
+    }
+    else{
+      u8g.drawBox( 35, 14, 60, 24);
+      u8g.setPrintPos(37, 35);
+    }
+    u8g.setColorIndex(0);
+    u8g.print(manualBrightness);
+    u8g.print(F("%"));
+    u8g.setColorIndex(1);
+    u8g.setPrintPos(55, 62); 
+    u8g.print(manualNoOfLed);
+    u8g.setFont(REGULAR_FONT);
+    
   }
   
   if(displayState == 2){
     setChevrons(3);
-    display.println((String)c[0]+F(" 100%"));
-    display.println((String)c[1]+F(" Cloud"));
-    display.println((String)c[2]+F(" Eco"));
+    u8g.setPrintPos(1, 25); 
+    u8g.print(c[0]);
+    u8g.print(F(" 100%"));
+    u8g.setPrintPos(1, 40); 
+    u8g.print(c[1]);
+    u8g.print(F(" Cloud"));
+    u8g.setPrintPos(1, 55); 
+    u8g.print(c[2]);
+    u8g.print(F(" Eco"));
   }
   
   else if(displayState == 3){
     setChevrons(3);
-    display.println((String)c[0]+F(" Set Temp"));
-    display.println((String)c[1]+F(" On/Off Time"));
-    display.println((String)c[2]+F(" Demo"));
+    u8g.setPrintPos(1, 25); 
+    u8g.print(c[0]);
+    u8g.print(F(" Set Temp"));
+    u8g.setPrintPos(1, 40); 
+    u8g.print(c[1]);
+    u8g.print(F(" On/Off Time"));
+    u8g.setPrintPos(1, 55); 
+    u8g.print(c[2]);
+    u8g.print(F(" Demo"));
   }
   
   else if(displayState == 10){
-    display.setTextSize(2);
-    display.setCursor(45,15);
-    display.print(manualBrightness);
-    display.println(F("%"));
-    display.setCursor(55,40);
-    display.setTextColor(BLACK, WHITE);
-    display.println(manualNoOfLed);
+    u8g.setFont(BIG_FONT);
+    if(manualBrightness == 100){
+      u8g.setPrintPos(30, 35);
+    }
+    else{
+      u8g.setPrintPos(37, 35);
+    }
+    u8g.print(manualBrightness);
+    u8g.print("%");
+    
+    u8g.drawBox( 53, 40, 20, 24);
+    u8g.setColorIndex(0);
+    u8g.setPrintPos(55, 62); 
+    u8g.print(manualNoOfLed);
+    u8g.setColorIndex(1);
+    u8g.setFont(REGULAR_FONT);
   }
 }
 
 void displayAll(){
-  display.clearDisplay();
-  displayHeader();
-  displayContent();
-  display.display();
+  u8g.firstPage();  
+  do {
+    displayHeader();
+    displayContent();
+  } while( u8g.nextPage() );
 }
 
 void setChevrons(byte n){
@@ -308,23 +346,24 @@ void setChevrons(byte n){
 }
 
 void screenPowerManagement(){
-  if(!displayDimmed && b1.getLastActivityTime() + SCREEN_DIM < millis() && b2.getLastActivityTime() + SCREEN_DIM < millis() && b3.getLastActivityTime() + SCREEN_DIM < millis() && b4.getLastActivityTime() + SCREEN_DIM < millis()){
-    display.dim(true);
-    display.display();
-    displayDimmed = true;
-  }
-  if(displayDimmed && (b1State == 1 || b2State == 1 || b3State == 1 || b4State == 1)){
-    display.dim(false);
-    display.display();
-    displayDimmed = false;
-  }
+// U8GLIB does not support dimming
+//  if(!displayDimmed && b1.getLastActivityTime() + SCREEN_DIM < millis() && b2.getLastActivityTime() + SCREEN_DIM < millis() && b3.getLastActivityTime() + SCREEN_DIM < millis() && b4.getLastActivityTime() + SCREEN_DIM < millis()){
+//    display.dim(true);
+//    display.display();
+//    displayDimmed = true;
+//  }
+//  if(displayDimmed && (b1State == 1 || b2State == 1 || b3State == 1 || b4State == 1)){
+//    display.dim(false);
+//    display.display();
+//    displayDimmed = false;
+//  }
 
   if(displayOn && b1.getLastActivityTime() + SCREEN_OFF < millis() && b2.getLastActivityTime() + SCREEN_OFF < millis() && b3.getLastActivityTime() + SCREEN_OFF < millis() && b4.getLastActivityTime() + SCREEN_OFF < millis()){
-    display.off();
+    u8g.sleepOn();
     displayOn = false;
   }
   if(!displayOn && (b1State == 1 || b2State == 1 || b3State == 1 || b4State == 1)){
-    display.begin(SSD1306_SWITCHCAPVCC, 60);
+    u8g.sleepOff();
     displayOn = true;
   }
 }
