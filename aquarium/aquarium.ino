@@ -22,7 +22,7 @@ bool displayOn = true;
 #define MODE_ECO 3
 #define MODE_DEMO 4
 
-const int leds[] PROGMEM = {3,9,10,11,103,109,110,111}; //if # > 100, pin is on second arduino
+byte leds[] = {3,9,10,11,103,109,110,111}; //if # > 100, pin is on second arduino
 
 OneButton b1(A0, true);
 OneButton b2(A1, true);
@@ -44,7 +44,8 @@ byte mode = 0;
 byte manualBrightness = 100;
 byte manualNoOfLed = 0;
 
-
+byte demoStep = 0;
+long demoStepStartTime = 0;
 
 void setup()   {                
   Serial.begin(9600);
@@ -52,9 +53,9 @@ void setup()   {
   //Init led pins :
   for(int i = 0; i < 4; i++){
     pinMode(leds[i],OUTPUT);
-    digitalWrite(leds[i], LOW);
+    analogWrite(leds[i], 100);
   }
-  
+
   setTime(13, 15, 0, 30, 6, 2015);
   u8g.setRot180();
   u8g.setColorIndex(1);
@@ -190,6 +191,8 @@ void handleButtons(){
         mode = MODE_DEMO;
         displayState = 0;
         selectNo = 0;
+        demoStep = 0;
+        demoStepStartTime = millis();
       }
       else{
         //TO-DO
@@ -382,15 +385,54 @@ void modeManagement(){
     
   }
   else{ //Mode demo
-    if(second() % 2 == 0){
+    if(demoStep == 0){
       for(byte i = 0; i < TOTALLED; i++){
         setLedBrightness(i, 255);
       }
-    }
-    else {
-      for(byte i = 0; i < TOTALLED; i++){
-        setLedBrightness(i, 0);
+      if(demoStepStartTime + 1000 < millis()){
+        demoStep++;
+        demoStepStartTime = millis();
       }
+      Serial.println("step0");
+    }
+    else if(demoStep == 1){
+      int brightnessTemp = -demoStepStartTime - 2500 + millis();
+      int brightness = ((float)abs(brightnessTemp)/2500)*255;
+      for(byte i = 0; i < TOTALLED; i++){
+       setLedBrightness(i, brightness);
+      }
+      if(demoStepStartTime + 5000 < millis()){
+        demoStep++;
+        demoStepStartTime = millis();
+      }
+    }
+    else if(demoStep == 2){
+      int brightnessTemp = -demoStepStartTime - 2500 + millis();
+      int brightness = ((float)abs(brightnessTemp)/2500)*255;
+      int correctOrder[] = {1,3,5,7,8,6,4,2};
+      for(byte i = 0; i < TOTALLED; i++){
+        setLedBrightness(correctOrder[i], abs(brightness - (i*255)/8));
+      }
+      if(demoStepStartTime + 5000 < millis()){
+        demoStep++;
+        demoStepStartTime = millis();
+      }
+    }
+    else if(demoStep == 3){
+      int brightnessTemp = -demoStepStartTime - 2500 + millis();
+      int brightness = ((float)abs(brightnessTemp)/2500)*255;
+      for(byte i = 0; i < TOTALLED/2; i=i+2){
+        setLedBrightness(i, abs(brightness - (i*255)/4));
+        setLedBrightness(i+1, abs(brightness - (i*255)/4));
+      }
+      if(demoStepStartTime + 5000 < millis()){
+        demoStep++;
+        demoStepStartTime = millis();
+      }
+    }
+    else{
+      Serial.println("done");
+      mode = MODE_MANUAL;
     }
   }
 }
@@ -433,9 +475,8 @@ void setLedBrightness(byte ledNo, byte brightness){
     analogWrite(leds[ledNo], brightness);
   }
   else {
-    Serial.print(leds[ledNo]);
-    Serial.print(",");
-    Serial.println(brightness);
+//    Serial.print(leds[ledNo]);
+//    Serial.print(",");
+//    Serial.println(brightness);
   }
 }
-
