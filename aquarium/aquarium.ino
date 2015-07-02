@@ -440,8 +440,8 @@ void modeManagement(){
       int brightnessTemp = -demoStepStartTime + millis();
       int brightness = ((float)abs(brightnessTemp)/5000)*255;
       int correctOrder[] = {0,2,4,6,7,5,3,1};
-      for(byte i = 0; i < TOTALLED/2; i++){
-        setLedBrightness(correctOrder[i], (brightness + (i*255)/3)%255);
+      for(byte i = 0; i < TOTALLED; i++){
+        setLedBrightness(correctOrder[i], (brightness + (i*255)/7)%255);
       }
       if(demoStepStartTime + 5000 < millis()){
         demoStep++;
@@ -493,8 +493,8 @@ void setLedBrightness(byte ledNo, byte brightness){
     analogWrite(leds[ledNo], brightness);
   }
   else {
-//    Serial.print(leds[ledNo]);
-//    Serial.print(",");
-//    Serial.println(brightness);
+    Serial.print(leds[ledNo]-100);
+    Serial.print(',');
+    Serial.println(brightness);
   }
 }
