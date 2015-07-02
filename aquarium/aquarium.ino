@@ -16,6 +16,7 @@ bool displayOn = true;
 #define TOTALLED 8
 #define REGULAR_FONT u8g_font_7x13B
 #define BIG_FONT u8g_font_fur20
+#define RELAY_PIN 2
 
 #define MODE_MANUAL 0
 #define MODE_100 1
@@ -60,6 +61,10 @@ void setup()   {
     analogWrite(leds[i], 0);
   }
 
+  //Init relay
+  pinMode(RELAY_PIN, OUTPUT);
+  digitalWrite(RELAY_PIN, HIGH);
+
   // Initialize DS1307
   setSyncProvider(RTC.get);
   setSyncInterval(3600);
@@ -92,6 +97,8 @@ void loop() {
   screenPowerManagement();
 
   autoControl();
+
+  relay();
 }
 
 void handleButtons(){
@@ -533,3 +540,13 @@ void autoControl(){
     manualNoOfLed = 0;
   }
 }
+
+void relay(){
+  if(mode == MODE_MANUAL && (manualNoOfLed == 0 || manualBrightness == 0)){
+    digitalWrite(RELAY_PIN, HIGH); //turn off relay
+  }
+  else{
+    digitalWrite(RELAY_PIN, LOW); //turn on relay
+  }
+}
+
