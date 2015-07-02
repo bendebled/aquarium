@@ -3,6 +3,7 @@
 #include <OneButton.h>
 #include <Time.h>
 #include <avr/pgmspace.h>
+#include <DS1307RTC.h>
 
 #define OLED_RESET 4
 //U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE|U8G_I2C_OPT_DEV_0); //SLOW
@@ -47,6 +48,9 @@ byte manualNoOfLed = 0;
 byte demoStep = 0;
 long demoStepStartTime = 0;
 
+bool autoOnDone = false;
+bool autoOffDone = false;
+
 void setup()   {                
   Serial.begin(9600);
 
@@ -56,7 +60,13 @@ void setup()   {
     analogWrite(leds[i], 0);
   }
 
-  setTime(13, 15, 0, 30, 6, 2015);
+  // Initialize DS1307
+  setSyncProvider(RTC.get);
+  setSyncInterval(3600);
+  tmElements_t tm;
+  while(!RTC.read(tm)){;}
+  setTime(tm.Hour, tm.Minute, tm.Second, tm.Day, tm.Month, tm.Year);
+
   u8g.setRot180();
   u8g.setColorIndex(1);
   u8g.setFont(REGULAR_FONT);
@@ -80,6 +90,8 @@ void loop() {
   modeManagement();
   
   screenPowerManagement();
+
+  autoControl();
 }
 
 void handleButtons(){
@@ -483,7 +495,7 @@ String getTimeStr(){
     spaceH = " ";
   }
   if(minute() < 10){
-    spaceM = " ";
+    spaceM = "0";
   }
   return spaceH + hour() + ":" + spaceM + minute();
 }
@@ -496,5 +508,28 @@ void setLedBrightness(byte ledNo, byte brightness){
     Serial.print(leds[ledNo]-100);
     Serial.print(',');
     Serial.println(brightness);
+  }
+}
+
+void autoControl(){
+  if(hour() == 20 && !autoOnDone){
+    mode = MODE_MANUAL;
+    manualNoOfLed = 8;
+    manualBrightness = 80;
+    autoOnDone = true;
+  }
+
+  if(hour() == 23 && !autoOffDone){
+    mode = MODE_MANUAL;
+    manualNoOfLed = 0;
+    autoOffDone = true;
+  }
+  
+  //Turn off everything at 23h59 (safetey reason)
+  if(hour() == 0 && minute() == 0){
+    autoOnDone = false;
+    autoOffDone = false;
+    mode = MODE_MANUAL;
+    manualNoOfLed = 0;
   }
 }
