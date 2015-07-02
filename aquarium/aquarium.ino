@@ -410,14 +410,22 @@ void modeManagement(){
       if(demoStepStartTime + 5000 < millis()){
         demoStep++;
         demoStepStartTime = millis();
+        //Turn off every leds
+        for(byte i = 0; i < TOTALLED; i++){
+          setLedBrightness(i, 0);
+        }
       }
     }
     else if(demoStep == 2){
-      int brightnessTemp = -demoStepStartTime - 2500 + millis();
-      int brightness = ((float)abs(brightnessTemp)/2500)*255;
-      int correctOrder[] = {1,3,5,7,8,6,4,2};
+      int correctOrder[] = {0,2,4,6,7,5,3,1};
       for(byte i = 0; i < TOTALLED; i++){
-        setLedBrightness(correctOrder[i], abs(brightness - (i*255)/8));
+        if(millis() - demoStepStartTime > i*(5000/TOTALLED) && millis() - demoStepStartTime < (i+1)*(5000/TOTALLED)){
+          Serial.println(i);
+          setLedBrightness(correctOrder[i], 255);
+        }
+        else{
+          setLedBrightness(correctOrder[i], 0);
+        }
       }
       if(demoStepStartTime + 5000 < millis()){
         demoStep++;
@@ -425,17 +433,33 @@ void modeManagement(){
       }
     }
     else if(demoStep == 3){
-      int brightnessTemp = -demoStepStartTime - 2500 + millis();
-      int brightness = ((float)abs(brightnessTemp)/2500)*255;
-      for(byte i = 0; i < TOTALLED/2; i=i+2){
-        setLedBrightness(i, abs(brightness - (i*255)/4));
-        setLedBrightness(i+1, abs(brightness - (i*255)/4));
+      int brightnessTemp = -demoStepStartTime + millis();
+      int brightness = ((float)abs(brightnessTemp)/5000)*255;
+      //int correctOrder[] = {0,2,4,6,7,5,3,1};
+      int correctOrder[] = {0,2,3,1};
+      for(byte i = 0; i < TOTALLED/2; i++){
+        setLedBrightness(correctOrder[i], (brightness + (i*255)/3)%255);
+        if(i ==0){
+          Serial.println((brightness + (i*255)/3)%255);
+        }
       }
       if(demoStepStartTime + 5000 < millis()){
         demoStep++;
         demoStepStartTime = millis();
       }
     }
+//    else if(demoStep == 4){
+//      int brightnessTemp = -demoStepStartTime - 2500 + millis();
+//      int brightness = ((float)abs(brightnessTemp)/2500)*255;
+//      for(byte i = 0; i < TOTALLED/2; i=i+2){
+//        setLedBrightness(i, abs(brightness - (i*255)/4));
+//        setLedBrightness(i+1, abs(brightness - (i*255)/4));
+//      }
+//      if(demoStepStartTime + 5000 < millis()){
+//        demoStep++;
+//        demoStepStartTime = millis();
+//      }
+//    }
     else{
       Serial.println("done");
       mode = MODE_MANUAL;
