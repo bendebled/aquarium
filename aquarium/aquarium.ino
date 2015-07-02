@@ -23,6 +23,7 @@ bool displayOn = true;
 #define MODE_CLOUD 2
 #define MODE_ECO 3
 #define MODE_DEMO 4
+#define MODE_OFF 10
 
 byte leds[] = {3,9,10,11,103,109,110,111}; //if # > 100, pin is on second arduino
 
@@ -39,7 +40,7 @@ byte b4State = 0;
 byte displayState = 0;
 byte selectNo = 0;
 
-char c[] = "   "; 
+char c[] = "    "; 
 
 byte mode = 0;
 
@@ -105,23 +106,30 @@ void handleButtons(){
   bool change = false;
   if(displayState == 0){
     if (b2State == b2.CLICK_STATE){
-      selectNo--;
-      if(selectNo == -1){
-        selectNo = 2;
+      if(selectNo > 0){
+        selectNo--;
+      }
+      else{
+        selectNo = 3;
       }
       change = true;
     }
     if (b3State == b3.CLICK_STATE){
-      selectNo = (selectNo + 1)%3;
+      selectNo = (selectNo + 1)%4;
       change = true;
     }
     if (b4State == b4.CLICK_STATE){
-      displayState = (selectNo+1);
-      if(displayState == 1){
-        mode = MODE_MANUAL;
+      if(selectNo == 3){
+        mode = MODE_OFF;
       }
-      if(displayState == 2 || displayState == 3){
-        selectNo = 0;
+      else{
+        displayState = (selectNo+1);
+        if(displayState == 1){
+          mode = MODE_MANUAL;
+        }
+        if(displayState == 2 || displayState == 3){
+          selectNo = 0;
+        }
       }
       change = true;
     }
@@ -169,8 +177,10 @@ void handleButtons(){
       change = true;
     }
     if (b2State == b2.CLICK_STATE){
-      selectNo--;
-      if(selectNo == -1){
+      if(selectNo > 0){
+        selectNo--;
+      }
+      else{
         selectNo = 2;
       }
       change = true;
@@ -195,8 +205,10 @@ void handleButtons(){
       change = true;
     }
     if (b2State == b2.CLICK_STATE){
-      selectNo--;
-      if(selectNo == -1){
+      if(selectNo > 0){
+        selectNo--;
+      }
+      else{
         selectNo = 2;
       }
       change = true;
@@ -271,7 +283,7 @@ void displayHeader(){
 void displayContent(){
   
   if(displayState == 0){
-    setChevrons(3);
+    setChevrons(4);
     u8g.setPrintPos(1, 25); 
     u8g.print(c[0]);
     u8g.print(F(" Manual"));
@@ -281,6 +293,9 @@ void displayContent(){
     u8g.setPrintPos(1, 55); 
     u8g.print(c[2]);
     u8g.print(F(" Settings"));
+    u8g.setPrintPos(80, 25); 
+    u8g.print(c[3]);
+    u8g.print(F(" OFF"));
   }
   
   else if(displayState == 1){
@@ -391,6 +406,11 @@ void screenPowerManagement(){
 }
 
 void modeManagement(){
+  if(mode == MODE_OFF){
+    for(byte i = 0; i < TOTALLED; i++){
+     setLedBrightness(i, 0);
+    }
+  }
   if(mode == MODE_MANUAL){
     byte i;
     for(i = 0; i < manualNoOfLed; i++){
@@ -422,7 +442,6 @@ void modeManagement(){
         demoStep++;
         demoStepStartTime = millis();
       }
-      Serial.println("step0");
     }
     else if(demoStep == 1){
       int brightnessTemp = -demoStepStartTime - 2500 + millis();
@@ -468,13 +487,15 @@ void modeManagement(){
       }
     }
     else{
-      Serial.println("done");
       mode = MODE_MANUAL;
     }
   }
 }
 
 String getModeStr(){
+  if(mode == MODE_OFF){
+    return "OFF";
+  }
   if(mode == MODE_MANUAL){
     return "M"+(String)manualNoOfLed+"-"+(String)manualBrightness;
   }
@@ -527,8 +548,7 @@ void autoControl(){
   }
 
   if(hour() == 23 && !autoOffDone){
-    mode = MODE_MANUAL;
-    manualNoOfLed = 0;
+    mode = MODE_OFF;
     autoOffDone = true;
   }
   
@@ -536,13 +556,12 @@ void autoControl(){
   if(hour() == 0 && minute() == 0){
     autoOnDone = false;
     autoOffDone = false;
-    mode = MODE_MANUAL;
-    manualNoOfLed = 0;
+    mode = MODE_OFF;
   }
 }
 
 void relay(){
-  if(mode == MODE_MANUAL && (manualNoOfLed == 0 || manualBrightness == 0)){
+  if(mode == MODE_OFF || (mode == MODE_MANUAL && (manualNoOfLed == 0 || manualBrightness == 0))){
     digitalWrite(RELAY_PIN, HIGH); //turn off relay
   }
   else{
