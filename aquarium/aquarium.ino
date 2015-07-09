@@ -42,10 +42,10 @@ byte selectNo = 0;
 
 char c[] = "    "; 
 
-byte mode = 0;
+byte mode = MODE_OFF;
 
 byte manualBrightness = 100;
-byte manualNoOfLed = 0;
+byte manualNoOfLed = 8;
 
 byte demoStep = 0;
 long demoStepStartTime = 0;
@@ -411,7 +411,7 @@ void modeManagement(){
      setLedBrightness(i, 0);
     }
   }
-  if(mode == MODE_MANUAL){
+  else if(mode == MODE_MANUAL){
     byte i;
     for(i = 0; i < manualNoOfLed; i++){
      setLedBrightness(i, manualBrightness*2.55);
