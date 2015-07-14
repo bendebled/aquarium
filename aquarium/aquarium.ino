@@ -399,9 +399,10 @@ void screenPowerManagement(){
     u8g.sleepOn();
     displayOn = false;
   }
-  if(!displayOn && (b1State == 1 || b2State == 1 || b3State == 1 || b4State == 1)){
+  else if(!displayOn && (b1State == 1 || b2State == 1 || b3State == 1 || b4State == 1)){
     u8g.sleepOff();
     displayOn = true;
+    displayAll();
   }
 }
 
