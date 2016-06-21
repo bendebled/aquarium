@@ -3,17 +3,13 @@
 #include <OneButton.h>
 #include <Time.h>
 #include <avr/pgmspace.h>
-#include <DS1307RTC.h>
+#include <DS3232RTC.h>
 
 #define OLED_RESET 4
 //U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE|U8G_I2C_OPT_DEV_0); //SLOW
 U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_DEV_0|U8G_I2C_OPT_NO_ACK|U8G_I2C_OPT_FAST); //FASTER
 bool displayDimmed = false;
 bool displayOn = true;
-
-bool rtcWorking = true;
-unsigned long lastRtcCheck = 0;
-unsigned long lastWorkingRtc = 0;
 
 #define SCREEN_DIM 5000
 #define SCREEN_OFF 10000
@@ -31,7 +27,7 @@ unsigned long lastWorkingRtc = 0;
 
 byte leds[] = {3,9,10,11,103,109,110,111}; //if # > 100, pin is on second arduino
 
-int brightness[] = {0,0,0,0,0,0,0,0}
+int brightness[] = {0,0,0,0,0,0,0,0};
 
 OneButton b1(A0, true);
 OneButton b2(A1, true);
@@ -78,20 +74,10 @@ void setup() {
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, HIGH);
 
-  // Initialize DS1307
+  // Initialize DS3231
   setSyncProvider(RTC.get);
   setSyncInterval(3600);
-  tmElements_t tm;
-  while(!RTC.read(tm) && millis() < 2000){;}
-  if(!RTC.read(tm)){
-    rtcWorking = false;
-    setTime(0, 0, 0, 0, 0, 0);
-  }
-  else{
-    setTime(tm.Hour, tm.Minute, tm.Second, tm.Day, tm.Month, tm.Year);
-    lastWorkingRtc = millis();
-  }
-  
+
   //Init screen
   u8g.setRot180();
   u8g.setColorIndex(1);
@@ -120,8 +106,6 @@ void loop() {
   autoControl();
 
   relay();
-
-  checkRtc();
   
   terminal();
 }
@@ -298,10 +282,6 @@ void displayHeader(){
   u8g.setColorIndex(0);
   u8g.setPrintPos(1, 10); 
   u8g.print(getModeStr());
-  if(!rtcWorking){
-    u8g.setPrintPos(70, 10); 
-    u8g.print("/!\\");
-  }
   u8g.setPrintPos(93, 10); 
   u8g.print(getTimeStr());
   u8g.setColorIndex(1);
@@ -595,20 +575,6 @@ void relay(){
   }
   else{
     digitalWrite(RELAY_PIN, LOW); //turn on relay
-  }
-}
-
-void checkRtc(){
-  if(millis() > lastRtcCheck + 3600000){ //Every hour...
-    tmElements_t tm;
-    rtcWorking = RTC.read(tm);
-    if(!rtcWorking && lastWorkingRtc == 0){
-      setTime(0, 0, 0, 0, 0, 0);
-    }
-    else if(rtcWorking){
-      lastWorkingRtc = millis();
-    }
-    lastRtcCheck = millis();
   }
 }
 
