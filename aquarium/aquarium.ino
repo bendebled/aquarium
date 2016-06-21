@@ -11,6 +11,10 @@ U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_DEV_0|U8G_I2C_OPT_NO_ACK|U8G_I2C_OPT_FAST)
 bool displayDimmed = false;
 bool displayOn = true;
 
+bool rtcWorking = true;
+unsigned long lastRtcCheck = 0;
+unsigned long lastWorkingRtc = 0;
+
 #define SCREEN_DIM 5000
 #define SCREEN_OFF 10000
 #define TOTALLED 8
@@ -26,6 +30,8 @@ bool displayOn = true;
 #define MODE_OFF 10
 
 byte leds[] = {3,9,10,11,103,109,110,111}; //if # > 100, pin is on second arduino
+
+int brightness[] = {0,0,0,0,0,0,0,0}
 
 OneButton b1(A0, true);
 OneButton b2(A1, true);
@@ -53,7 +59,13 @@ long demoStepStartTime = 0;
 bool autoOnDone = false;
 bool autoOffDone = false;
 
-void setup()   {                
+//Terminal
+bool debug = false;
+byte RX = 0;
+byte TX = 1;
+
+
+void setup() {                
   Serial.begin(9600);
 
   //Init led pins :
@@ -70,9 +82,17 @@ void setup()   {
   setSyncProvider(RTC.get);
   setSyncInterval(3600);
   tmElements_t tm;
-  while(!RTC.read(tm)){;}
-  setTime(tm.Hour, tm.Minute, tm.Second, tm.Day, tm.Month, tm.Year);
-
+  while(!RTC.read(tm) && millis() < 2000){;}
+  if(!RTC.read(tm)){
+    rtcWorking = false;
+    setTime(0, 0, 0, 0, 0, 0);
+  }
+  else{
+    setTime(tm.Hour, tm.Minute, tm.Second, tm.Day, tm.Month, tm.Year);
+    lastWorkingRtc = millis();
+  }
+  
+  //Init screen
   u8g.setRot180();
   u8g.setColorIndex(1);
   u8g.setFont(REGULAR_FONT);
@@ -100,6 +120,10 @@ void loop() {
   autoControl();
 
   relay();
+
+  checkRtc();
+  
+  terminal();
 }
 
 void handleButtons(){
@@ -274,6 +298,10 @@ void displayHeader(){
   u8g.setColorIndex(0);
   u8g.setPrintPos(1, 10); 
   u8g.print(getModeStr());
+  if(!rtcWorking){
+    u8g.setPrintPos(70, 10); 
+    u8g.print("/!\\");
+  }
   u8g.setPrintPos(93, 10); 
   u8g.print(getTimeStr());
   u8g.setColorIndex(1);
@@ -554,7 +582,7 @@ void autoControl(){
   }
   
   //Turn off everything at 23h59 (safetey reason)
-  if(hour() == 0 && minute() == 0){
+  if(hour() == 23 && minute() == 59){
     autoOnDone = false;
     autoOffDone = false;
     mode = MODE_OFF;
@@ -570,3 +598,23 @@ void relay(){
   }
 }
 
+void checkRtc(){
+  if(millis() > lastRtcCheck + 3600000){ //Every hour...
+    tmElements_t tm;
+    rtcWorking = RTC.read(tm);
+    if(!rtcWorking && lastWorkingRtc == 0){
+      setTime(0, 0, 0, 0, 0, 0);
+    }
+    else if(rtcWorking){
+      lastWorkingRtc = millis();
+    }
+    lastRtcCheck = millis();
+  }
+}
+
+void terminal(){
+  //if contains set time yyyy-mm-dd-hh-mm
+  //if contains help
+  //if contains set debug true/false
+  //if contains status
+}
